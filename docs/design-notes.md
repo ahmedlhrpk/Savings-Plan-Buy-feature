@@ -3,15 +3,15 @@ The solution implements a serverless "Savings Plan Buy" feature where users conf
 
 ###Step-by-Step Flow Explanation###
 
-User Request Flow:
+- User Request Flow:
 
-- Frontend → API Gateway (REST endpoint)
+Frontend → API Gateway (REST endpoint)
 → Routes to User Config Lambda (Creates/updates savings plan)
 → Writes to DynamoDB (Persists plan details with userId and planId)
 
 
 
-Event-Driven Scheduling:
+- Event-Driven Scheduling:
 
 User Config Lambda emits "PlanCreated" event to EventBridge
 EventBridge triggers Scheduler Lambda (Sets up cron-based rules)
@@ -19,7 +19,7 @@ Scheduler invokes Execution Lambda at defined intervals
 
 
 
-Purchase Execution:
+- Purchase Execution:
 
 Execution Lambda processes bitcoin purchase
 Updates DynamoDB record with transaction status
@@ -27,7 +27,7 @@ Publishes results to SNS Topic (Success/Failure notifications)
 
 
 
-Notifications & Audit:
+- Notifications & Audit:
 
 SNS → Triggers Lambda (Sends email/SMS alerts)
 All transactions logged to S3 via CloudTrail (Immutable audit trail)
