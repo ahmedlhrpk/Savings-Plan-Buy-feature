@@ -1,134 +1,91 @@
-The solution implements a serverless "Savings Plan Buy" feature where users configure recurring bitcoin purchases via an API Gateway, which triggers Lambda functions to process requests and store plans in an encrypted DynamoDB table. EventBridge handles scheduling and orchestrates purchase executions, while all events are archived for compliance. The infrastructure is deployed via CDK with proper monitoring, logging, and security controls.
+# Design Notes
 
+## Overview
 
-###Step-by-Step Flow Explanation###
+This document outlines the key design decisions and microservice boundaries for the **Savings Plan Buy** feature in our regulated Bitcoin broker platform. The architecture is fully serverless, prioritizing scalability, security, auditability, and maintainability in line with fintech and crypto compliance requirements.
 
-- User Request Flow:
+---
 
-Frontend → API Gateway (REST endpoint)
-→ Routes to User Config Lambda (Creates/updates savings plan)
-→ Writes to DynamoDB (Persists plan details with userId and planId)
+## Microservice Boundaries
 
+The solution is broken down into the following microservices/domains:
 
+1. **Savings Plan Manager**  
+   - Handles creation, update, and deletion of user savings plans (recurring buy configurations).
+   - Exposes API endpoints for user interaction.
+   - Persists plan data securely.
 
-- Event-Driven Scheduling:
+2. **Purchase Orchestrator**  
+   - Schedules and triggers recurring Bitcoin purchase events based on user plans.
+   - Integrates with AWS EventBridge Scheduler.
 
-User Config Lambda emits "PlanCreated" event to EventBridge
-EventBridge triggers Scheduler Lambda (Sets up cron-based rules)
-Scheduler invokes Execution Lambda at defined intervals
+3. **Transaction Processor**  
+   - Executes the actual Bitcoin purchase transactions.
+   - Handles interaction with external exchanges and payment providers.
+   - Manages error handling, retries, and dead-letter queues.
 
+4. **Notification Service**  
+   - Sends notifications (email, SMS, push) to users regarding plan status and purchase outcomes.
 
+5. **Audit & Compliance Service**  
+   - Aggregates logs, tracks data changes, and ensures audit trails are immutable and retained as required.
 
-- Purchase Execution:
+---
 
-Execution Lambda processes bitcoin purchase
-Updates DynamoDB record with transaction status
-Publishes results to SNS Topic (Success/Failure notifications)
+## Implemented Microservice
 
+**Savings Plan Manager**  
+*This is the microservice implemented in this codebase.*
 
+**Purpose:**  
+- Provides a secure API for users to create and manage their recurring Bitcoin savings plans.
+- Validates and persists plan details (amount, schedule, funding source) in DynamoDB.
+- Ensures all operations are logged for auditability.
+- Applies encryption, point-in-time recovery, and least-privilege IAM policies for compliance.
 
-- Notifications & Audit:
+---
 
-SNS → Triggers Lambda (Sends email/SMS alerts)
-All transactions logged to S3 via CloudTrail (Immutable audit trail)
+## Key Design Decisions
 
+- **Serverless First:**  
+  All compute is handled by AWS Lambda, ensuring scalability and cost efficiency.
 
+- **Event-Driven Architecture:**  
+  EventBridge (planned) will be used for orchestration of scheduled purchases, enabling loose coupling between services.
 
+- **Separation of Concerns:**  
+  Each microservice is responsible for a single domain, allowing for independent development, scaling, and compliance checks.
 
+- **Security & Compliance:**  
+  - DynamoDB tables are encrypted at rest.
+  - Point-in-time recovery is enabled for all critical data.
+  - API Gateway enforces HTTPS and logs all access.
+  - Lambda functions have retries, dead-letter queues, and X-Ray tracing enabled.
+  - IAM roles follow least-privilege principles.
 
+- **Auditability:**  
+  - All API and Lambda actions are logged to CloudWatch with retention policies.
+  - DynamoDB Streams (planned) will be used for tracking changes for audit purposes.
 
+- **Environment Isolation:**  
+  Separate configuration files and deployment environments (staging, prod) ensure safe rollout and testing.
 
+- **Migration Ready:**  
+  The codebase is modular and structured to support future migration to Terraform, as described in the migration plan.
 
+---
 
+## Summary
 
+- **All microservices:**  
+  - Savings Plan Manager (implemented)  
+  - Purchase Orchestrator  
+  - Transaction Processor  
+  - Notification Service  
+  - Audit & Compliance Service
 
-Domain/Microservice Boundaries
-- User Configuration Service
+- **This submission implements:**  
+  The **Savings Plan Manager**, providing the core API and data persistence for user recurring buy plans, with a focus on security, auditability, and regulatory compliance.
 
-Handles CRUD operations for savings plans
-Exposes REST API via API Gateway
-Stores configurations in DynamoDB
+---
 
-- Scheduler Service
-
-Uses EventBridge rules to trigger purchases
-Maintains execution state in DynamoDB
-
-- Execution Service
-
-Processes actual bitcoin purchases
-Integrates with payment processor
-Updates transaction records
-
-- Notification Service
-
-Sends user notifications via SNS/SMS/Email
-Maintains notification history
-
-- Audit Service
-
-Captures all critical events
-Stores immutable logs in S3 with Glacier transition
-
-
-
-Design Considerations
-Scalability and Fault Tolerance
-
-All Lambda functions configured with appropriate concurrency limits
-
-DynamoDB tables with auto-scaling capacity
-
-Dead-letter queues for failed events
-
-Circuit breakers for external integrations
-
-Orchestration Approach
-
-Hybrid model using EventBridge for scheduling (orchestration) and SQS for decoupled processing (choreography)
-
-EventBridge rules trigger the execution pipeline
-
-SQS queues handle retries and backpressure
-
-Regulatory/Audit Concerns
-
-All financial transactions logged immutably in S3 with versioning
-
-CloudTrail enabled for all API calls
-
-KMS encryption for data at rest and in transit
-
-IAM policies following principle of least privilege
-
-Data retention policies aligned with financial regulations
-
-Deployment Environments
-
-Separate AWS accounts for dev/staging/production
-
-Infrastructure deployed via CI/CD pipeline
-
-Feature flags for gradual rollouts
-
-Blue/green deployment for critical components
-
-CI/CD Pipeline
-
-GitHub Actions for build/test/deploy
-
-Infrastructure tests using CDK assertions
-
-Automated security scanning
-
-Manual approval gates for production
-
-Monitoring
-
-CloudWatch dashboards for key metrics
-
-Alarms for error rates and latency
-
-X-Ray for distributed tracing
-
-Regular audit reports
