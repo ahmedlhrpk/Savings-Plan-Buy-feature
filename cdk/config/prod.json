@@ -1,0 +1,5 @@
+{
+  "env": "prod",
+  "region": "us-east-1",
+  "account": "987654321098"
+}
