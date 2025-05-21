@@ -142,10 +142,4 @@ mode = "Active"
 - Carefully import and manage existing CDK-managed resources and dependencies.
 - The provided code comparison illustrates how CDK constructs map to Terraform resources.
 
----
-
-*This document can be included as `docs/migration-plan.md` in your GitHub repository.*
-
-
----
 
